@@ -2,7 +2,7 @@ services:
   - type: web
     name: gpts-chatbot
     runtime: docker
-    repo: https://github.com/<YOUR_GITHUB_USERNAME>/gpts-chatbot
+    repo: https://github.com/haophan153/gpts-chatbot
     dockerfilePath: ./Dockerfile
     healthCheckPath: /
     envVars:
@@ -12,12 +12,6 @@ services:
         value: false
       - key: APP_KEY
         generateValue: true
-      - key: APP_URL
-        fromService:
-          type: web
-          name: gpts-chatbot
-          envVarKey: RENDER_EXTERNAL_URL
-          format: url
       - key: DB_CONNECTION
         value: pgsql
       - key: DB_HOST
@@ -25,7 +19,9 @@ services:
           name: gpts-db
           property: host
       - key: DB_PORT
-        value: "5432"
+        fromDatabase:
+          name: gpts-db
+          property: port
       - key: DB_DATABASE
         fromDatabase:
           name: gpts-db
@@ -54,7 +50,7 @@ services:
   - type: worker
     name: gpts-chatbot-worker
     runtime: docker
-    repo: https://github.com/<YOUR_GITHUB_USERNAME>/gpts-chatbot
+    repo: https://github.com/haophan153/gpts-chatbot
     dockerfilePath: ./Dockerfile
     envVars:
       - key: APP_ENV
@@ -70,7 +66,9 @@ services:
           name: gpts-db
           property: host
       - key: DB_PORT
-        value: "5432"
+        fromDatabase:
+          name: gpts-db
+          property: port
       - key: DB_DATABASE
         fromDatabase:
           name: gpts-db
