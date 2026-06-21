@@ -1,0 +1,1280 @@
+openapi: 3.1.1
+info:
+  title: Vietnam FastTrack Booking API
+  description: API for creating and managing FastTrack airport service bookings
+  version: 2.0.0
+servers:
+  - url: https://mandatory-papaya-sanded.ngrok-free.dev/api
+    description: Production server (ngrok tunnel)
+security:
+  - ApiKeyAuth: []
+components:
+  schemas: {}
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key required for all requests. Obtain from the system administrator.
+paths:
+  /bookings/init:
+    post:
+      operationId: initBooking
+      summary: Initialize a new booking draft
+      description: Creates a new booking draft. Call this once at the start of the conversation. If from_booking_code is provided, booking_type and arrival_airport become optional — they will be auto-filled from the referenced booking.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                booking_type:
+                  type: string
+                  enum: [both, arrival, departure]
+                  description: Type of service. Required unless from_booking_code is provided.
+                  example: arrival
+                arrival_airport:
+                  type: string
+                  enum: ["0", "1", "2", "3"]
+                  description: "0=SGN, 1=DAD, 2=HAN, 3=PQC"
+                  example: "0"
+                departure_airport_code:
+                  type: string
+                  enum: ["0", "1", "2", "3"]
+                  description: "0=SGN, 1=DAD, 2=HAN, 3=PQC"
+                  example: "2"
+                user_phone_number:
+                  type: string
+                  description: Contact phone number
+                  example: "+84909123456"
+                contact_email_to:
+                  type: string
+                  format: email
+                  description: Contact email
+                  example: test@example.com
+                from_booking_code:
+                  type: string
+                  description: "Optional. When provided, booking_type, arrival_airport, entry_fast_track_option, entry_fast_track_price, and options will be auto-filled from the referenced booking."
+                  example: "VJP-ABC12345"
+                needs_declaration_support:
+                  type: integer
+                  description: "SGN online declaration support. 1=wish, 0=no wish"
+                  example: 0
+                arrival_flight_reservation_code:
+                  type: string
+                  description: Flight reservation code for arrival
+                  example: "ABC123"
+                arrival_flight_number:
+                  type: string
+                  description: Arrival flight number
+                  example: "VN349"
+                arrival_date:
+                  type: string
+                  format: date
+                  description: Arrival date (YYYY-MM-DD)
+                  example: "2026-06-15"
+                arrival_time:
+                  type: string
+                  format: time
+                  description: Arrival time (HH:MM)
+                  example: "14:30"
+                arrival_phone_number:
+                  type: string
+                  description: Vietnamese speaker's phone number at arrival pickup
+                  example: "+84909123456"
+                arrival_request:
+                  type: string
+                  description: Special requests for arrival
+                arrival_class_documents:
+                  type: string
+                  enum: [economy, business]
+                  description: Arrival ticket class
+                  example: economy
+                arrival_checked_baggage_availability:
+                  type: string
+                  enum: [available, not_available, undecided]
+                  description: Checked baggage availability for arrival
+                  example: "available"
+                departure_date:
+                  type: string
+                  format: date
+                  description: Departure date (YYYY-MM-DD)
+                  example: "2026-06-20"
+                departure_phone_number:
+                  type: string
+                  description: Vietnamese speaker's phone number at departure dropoff
+                departure_request:
+                  type: string
+                  description: Special requests for departure
+                departure_class_documents:
+                  type: string
+                  enum: [economy, business]
+                  description: Departure ticket class
+                departure_checked_baggage_availability:
+                  type: string
+                  enum: [available, not_available, undecided]
+                  description: Checked baggage availability for departure
+                departure_seating_preferences:
+                  type: string
+                  description: |
+                    Departure seat preference.
+                    DB stores: 0=A(Không yêu cầu), 1=B(前方窓側), 2=C(前方通路側), 3=D(前方中央/窓側),
+                    4=E(中間列窓側), 5=F(中間列通路側), 6=G(中間列中央/窓側), 7=H(後方窓側),
+                    8=I(後方通路側), 9=J(後方中央/窓側).
+                    Accepts: 0-9 or A-J (normalized to 0-9).
+                  example: "3"
+                use_immigration_fast_track:
+                  type: boolean
+                  description: Complete immigration within 15 minutes (+$15)
+                tarmac_pickup:
+                  type: boolean
+                  description: Meet at aircraft door or shuttle bus drop-off (+$60)
+                pickup_service:
+                  type: integer
+                  description: "0=利用しない, 1=迎車 4席 ($20), 2=迎車 7席 ($25), 3=迎車 9席 Limousine ($50)"
+                contact_email_cc:
+                  type: string
+                  format: email
+                  description: CC contact email
+                  example: cc@example.com
+      responses:
+        "201":
+          description: Booking draft created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      booking_code:
+                        type: string
+                        example: "VJP-A1B2C3D4"
+                      collected_fields:
+                        type: array
+                        items:
+                          type: string
+                      missing_fields:
+                        type: array
+                        items:
+                          type: string
+                      next_step:
+                        type: string
+                        example: entry_fast_track_option
+        "422":
+          description: Validation error
+  /bookings/by-email/{email}:
+    delete:
+      operationId: destroyBookingsByEmail
+      summary: Permanently delete all bookings by email
+      description: Hard deletes all bookings, passengers, and flight details associated with the provided email. This action is irreversible.
+      parameters:
+        - name: email
+          in: path
+          required: true
+          schema:
+            type: string
+            format: email
+          description: Email address to search and delete all associated bookings
+          example: customer@example.com
+      responses:
+        "200":
+          description: Bookings deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  deleted_count:
+                    type: integer
+        "404":
+          description: No bookings found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        "422":
+          description: Validation error
+  /bookings/lookup:
+    get:
+      operationId: lookupBookings
+      summary: Look up booking history by phone or email
+      description: >
+        Used to identify returning customers. Returns all bookings associated with
+        the provided phone or email. Searches in both bookings.contact_email_to and
+        passengers.contact_email_to for maximum match coverage. Cancelled bookings are excluded.
+      parameters:
+        - name: phone
+          in: query
+          required: false
+          schema:
+            type: string
+          example: "+84909123456"
+        - name: email
+          in: query
+          required: false
+          schema:
+            type: string
+            format: email
+          example: test@example.com
+      responses:
+        "200":
+          description: Bookings found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  is_returning_customer:
+                    type: boolean
+                  latest_booking:
+                    type: object
+                    properties:
+                      booking_code:
+                        type: string
+                      booking_type:
+                        type: string
+                      use_departure_fast_track:
+                        type: boolean
+                      arrival_airport:
+                        type: string
+                      departure_airport_code:
+                        type: string
+                      entry_fast_track_option:
+                        type: string
+                      departure_fast_track_option:
+                        type: string
+                      entry_fast_track_price:
+                        type: string
+                      departure_fast_track_price:
+                        type: string
+                      options:
+                        type: array
+                        items:
+                          type: object
+                      passengers:
+                        type: array
+                        items:
+                          type: object
+                  all_bookings:
+                    type: array
+                    items:
+                      type: object
+        "404":
+          description: No bookings found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  is_returning_customer:
+                    type: boolean
+                  message:
+                    type: string
+  /bookings/verify-passport:
+    post:
+      operationId: verifyPassport
+      summary: Verify passport number against a booking
+      description: >
+        Verifies that the provided passport number matches any passenger on the specified booking.
+        Used as identity verification before allowing sensitive operations like cancellation.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [booking_code, passport_number]
+              properties:
+                booking_code:
+                  type: string
+                  description: The booking code to verify against
+                  example: "VJP-A1B2C3D4"
+                passport_number:
+                  type: string
+                  description: Passport number to match (case-insensitive, trimmed)
+                  example: "A12345678"
+      responses:
+        "200":
+          description: Passport verified successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  verified:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Passport verified successfully."
+        "403":
+          description: Passport does not match
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  verified:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "Passport number does not match any passenger on this booking."
+        "404":
+          description: Booking not found
+  /bookings/cancel/request-otp:
+    post:
+      operationId: requestCancellationOtp
+      summary: Request OTP for booking cancellation
+      description: >
+        Step 1 of the cancellation flow.
+        Sends a 6-digit OTP to the booking's contact email.
+        The OTP expires in 5 minutes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [booking_code]
+              properties:
+                booking_code:
+                  type: string
+                  description: The booking code to request OTP for
+                  example: "VJP-A1B2C3D4"
+      responses:
+        "200":
+          description: OTP sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "OTP sent to customer@email.com"
+        "404":
+          description: Booking not found
+        "422":
+          description: No contact email on booking or booking already cancelled
+  /bookings/cancel/verify-otp:
+    post:
+      operationId: verifyCancellationOtp
+      summary: Verify OTP and cancel booking
+      description: >
+        Step 2 of the cancellation flow.
+        Verifies the 6-digit OTP and cancels the booking if valid.
+        OTP must have been requested via request-otp first and not yet expired.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [booking_code, otp_code]
+              properties:
+                booking_code:
+                  type: string
+                  description: The booking code to cancel
+                  example: "VJP-A1B2C3D4"
+                otp_code:
+                  type: string
+                  description: 6-digit OTP code received via email
+                  example: "483921"
+                reason:
+                  type: string
+                  description: Optional cancellation reason
+                  example: "khách hàng yêu cầu hủy"
+      responses:
+        "200":
+          description: OTP verified and booking cancelled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  verified:
+                    type: boolean
+                    example: true
+                  cancelled:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Booking cancelled successfully."
+        "422":
+          description: OTP invalid, expired, or no pending OTP found
+  /bookings/cancel:
+    post:
+      operationId: cancelWithVerification
+      summary: Cancel a booking with automatic passport verification (recommended)
+      description: >
+        This is the RECOMMENDED endpoint for all cancellation requests.
+        It verifies the passport AND cancels the booking in a single API call.
+        Use this instead of calling verify-passport separately.
+        Steps that were previously separated (verify then delete) are now combined into one call.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [booking_code, passport_number]
+              properties:
+                booking_code:
+                  type: string
+                  description: The booking code to cancel (e.g. VJP-C9419555)
+                  example: "VJP-C9419555"
+                passport_number:
+                  type: string
+                  description: Passport number for identity verification (case-insensitive, trimmed)
+                  example: "KUJSHD23"
+                reason:
+                  type: string
+                  description: Optional cancellation reason
+                  example: "khách hàng yêu cầu hủy"
+      responses:
+        "200":
+          description: Booking cancelled and verified successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  verified:
+                    type: boolean
+                    example: true
+                  cancelled:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Booking cancelled successfully."
+        "403":
+          description: Passport verification failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  verified:
+                    type: boolean
+                    example: false
+                  cancelled:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "Passport number does not match."
+        "404":
+          description: Booking not found
+  /bookings/{bookingCode}:
+    get:
+      operationId: getBooking
+      summary: Get booking details
+      description: Retrieves booking details by booking code
+      parameters:
+        - name: bookingCode
+          in: path
+          required: true
+          schema:
+            type: string
+          example: VJP-CB13070C
+      responses:
+        "200":
+          description: Booking found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+        "404":
+          description: Booking not found
+    patch:
+      operationId: updateBookingStep
+      summary: Update booking step-by-step
+      description: Update booking with new information. Call this after every successful info collection. Returns full booking state including collected_fields, missing_fields, and next_step.
+      parameters:
+        - name: bookingCode
+          in: path
+          required: true
+          schema:
+            type: string
+          example: VJP-CB13070C
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                booking_type:
+                  type: string
+                  enum: [both, arrival, departure]
+                use_departure_fast_track:
+                  type: boolean
+                needs_declaration_support:
+                  type: integer
+                  description: "1=wish, 0=no wish"
+                arrival_airport:
+                  type: string
+                  enum: ["0", "1", "2", "3"]
+                  description: "0=SGN, 1=DAD, 2=HAN, 3=PQC"
+                departure_airport_code:
+                  type: string
+                  enum: ["0", "1", "2", "3"]
+                  description: "0=SGN, 1=DAD, 2=HAN, 3=PQC"
+                entry_fast_track_option:
+                  type: string
+                  description: Entry fast track package code
+                  example: "0"
+                departure_fast_track_option:
+                  type: string
+                  description: Departure fast track package code
+                  example: "2"
+                entry_fast_track_price:
+                  type: number
+                  format: float
+                  description: Base price of the entry service package in USD
+                  example: 35
+                departure_fast_track_price:
+                  type: number
+                  format: float
+                  description: Base price of the departure service package in USD
+                  example: 65
+                arrival_flight_reservation_code:
+                  type: string
+                arrival_flight_number:
+                  type: string
+                arrival_date:
+                  type: string
+                  format: date
+                arrival_time:
+                  type: string
+                  format: time
+                arrival_phone_number:
+                  type: string
+                arrival_request:
+                  type: string
+                arrival_class_documents:
+                  type: string
+                  enum: [economy, business]
+                arrival_checked_baggage_availability:
+                  type: string
+                  enum: [available, not_available, undecided]
+                departure_date:
+                  type: string
+                  format: date
+                departure_phone_number:
+                  type: string
+                departure_request:
+                  type: string
+                departure_class_documents:
+                  type: string
+                  enum: [economy, business]
+                departure_checked_baggage_availability:
+                  type: string
+                  enum: [available, not_available, undecided]
+                departure_seating_preferences:
+                  type: string
+                use_immigration_fast_track:
+                  type: boolean
+                tarmac_pickup:
+                  type: boolean
+                pickup_service:
+                  type: integer
+                contact_email_cc:
+                  type: string
+                  format: email
+                passengers:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      sex:
+                        type: string
+                        description: "Gender. DB stores: 0=男性(Nam), 1=女性(Nữ). Accepts: 0, 1, male, female, Nam, Nữ (normalized to 0 or 1)."
+                        example: male
+                      date_of_birth:
+                        type: string
+                        format: date
+                        example: "1990-05-15"
+                      user_phone_number:
+                        type: string
+                        example: "+84909123456"
+                      contact_email_to:
+                        type: string
+                        format: email
+                        example: test@example.com
+                      last_name:
+                        type: string
+                        example: Nguyen
+                      first_name:
+                        type: string
+                        example: "Van A"
+                      nationality:
+                        type: string
+                        example: JP
+                      passport_number:
+                        type: string
+                        example: B1234567
+                      passport_expiry_date:
+                        type: string
+                        format: date
+                        example: "2030-05-15"
+                      contact_email_cc:
+                        type: string
+                        format: email
+                      optional_company_name:
+                        type: string
+                      referred_by_name:
+                        type: string
+                      contact_method:
+                        type: integer
+                        description: "0=LINE追加, 1=LINK追加, 2=メールのみ, 3=電話のみ, 4=ZALO, 5=空港で相談"
+                      survey_channel:
+                        type: integer
+                        description: "0=知り合い, 1=サービス紹介メール, 2=Facebook, 3=広告, 4=検索, 5=再利用"
+                      add_ons:
+                        type: array
+                        items:
+                          type: string
+                        description: "Array of add-on service codes (0-9)"
+                flight_details:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      flight_type:
+                        type: string
+                        enum: [arrival, departure]
+                        example: arrival
+                      booking_code:
+                        type: string
+                        description: Flight booking code (PNR)
+                        example: ABC123
+                      flight_reservation_code:
+                        type: string
+                        description: Flight reservation code
+                        example: ABC123
+                      flight_number:
+                        type: string
+                        example: VN349
+                      flight_date:
+                        type: string
+                        format: date
+                        example: "2026-06-15"
+                      flight_time:
+                        type: string
+                        description: Local time at airport (HH:MM)
+                        example: "14:30"
+                      class_documents:
+                        type: string
+                        enum: [economy, business]
+                        example: economy
+                      use_immigration_fast_track:
+                        type: boolean
+                        description: Complete immigration within 15 minutes (+$15)
+                        example: true
+                      tarmac_pickup:
+                        type: boolean
+                        description: Meet at aircraft door or shuttle bus drop-off (+$60)
+                        example: false
+                      pickup_service:
+                        type: integer
+                        description: "0=利用しない, 1=迎車 4席 ($20), 2=迎車 7席 ($25), 3=迎車 9席 Limousine ($50)"
+                        example: 0
+                      checked_baggage_availability:
+                        type: string
+                        enum: [available, not_available, undecided]
+                        example: "not_available"
+                      request:
+                        type: string
+                        description: Special requests (arrival_request / departure_request)
+                      pickup_time:
+                        type: string
+                        description: Pickup time at departure airport (HH:MM)
+                        example: "06:00"
+                      seating_preferences:
+                        type: string
+                        description: Seat preference for departure (0-9)
+                        example: "0"
+                      phone_number:
+                        type: string
+                        description: Vietnamese speaker's phone number at pickup/dropoff
+                      driver_info_confirmation:
+                        type: string
+      responses:
+        "200":
+          description: Booking updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      booking_code:
+                        type: string
+                      booking_type:
+                        type: string
+                      use_departure_fast_track:
+                        type: boolean
+                      needs_declaration_support:
+                        type: integer
+                      arrival_airport:
+                        type: string
+                      departure_airport_code:
+                        type: string
+                      entry_fast_track_option:
+                        type: string
+                      entry_fast_track_price:
+                        type: number
+                      departure_fast_track_option:
+                        type: string
+                      departure_fast_track_price:
+                        type: number
+                      arrival_flight_reservation_code:
+                        type: string
+                      arrival_flight_number:
+                        type: string
+                      arrival_date:
+                        type: string
+                        format: date
+                      arrival_time:
+                        type: string
+                      arrival_phone_number:
+                        type: string
+                      arrival_request:
+                        type: string
+                      arrival_class_documents:
+                        type: string
+                      arrival_checked_baggage_availability:
+                        type: string
+                      departure_date:
+                        type: string
+                        format: date
+                      departure_phone_number:
+                        type: string
+                      departure_request:
+                        type: string
+                      departure_class_documents:
+                        type: string
+                      departure_checked_baggage_availability:
+                        type: string
+                      departure_seating_preferences:
+                        type: string
+                      options:
+                        type: array
+                      subtotal:
+                        type: number
+                      preliminary_calculation:
+                        type: number
+                      two_way_discount:
+                        type: number
+                      coupon_discount_amount:
+                        type: number
+                      night_surcharge_value:
+                        type: number
+                      tax:
+                        type: number
+                      total:
+                        type: number
+                      payment_method:
+                        type: string
+                      passengers:
+                        type: array
+                      collected_fields:
+                        type: array
+                        items:
+                          type: string
+                      missing_fields:
+                        type: array
+                        items:
+                          type: string
+                      next_step:
+                        type: string
+        "404":
+          description: Booking not found
+        "422":
+          description: Cannot modify confirmed booking
+    put:
+      operationId: updateBooking
+      summary: Update booking (legacy)
+      description: General update for booking status, payment
+      parameters:
+        - name: bookingCode
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                payment_method:
+                  type: string
+                  enum: ["0", "1", "2"]
+                  description: "0=現金払い, 1=オンラインでクレジット決済, 2=ベトナム口座振込"
+      responses:
+        "200":
+          description: Booking updated
+        "404":
+          description: Booking not found
+    delete:
+      operationId: cancelBooking
+      summary: Cancel a booking (soft delete)
+      description: Cancels ONE specific booking using its booking code (e.g. VJP-C9419555). Use THIS endpoint for all cancellation requests — NOT /by-email.
+      x-endpoint-type: cancel-single-booking
+      parameters:
+        - name: bookingCode
+          in: path
+          required: true
+          schema:
+            type: string
+          example: VJP-CB13070C
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  description: Optional cancellation reason provided by the customer
+                  example: "khách hàng yêu cầu hủy"
+      responses:
+        "200":
+          description: Booking cancelled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        "404":
+          description: Booking not found
+  /bookings/{bookingCode}/confirm:
+    post:
+      operationId: confirmBooking
+      summary: Confirm and finalize a booking
+      description: >
+        Called when customer approves the booking review. Validates all required fields
+        are present before confirming. On success, the booking is automatically forwarded
+        to the external system configured via `WEB_BOOKING_API_URL`.
+      parameters:
+        - name: bookingCode
+          in: path
+          required: true
+          schema:
+            type: string
+          example: VJP-CB13070C
+      responses:
+        "200":
+          description: Booking confirmed and synced with external system
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+        "422":
+          description: Missing required fields
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  missing_fields:
+                    type: array
+                    items:
+                      type: string
+        "502":
+          description: Confirmed locally but failed to sync with external system
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "Booking confirmed locally but failed to sync with external system. Please contact support."
+                  data:
+                    type: object
+  /bookings/{bookingCode}/payment:
+    post:
+      operationId: updatePayment
+      summary: Record payment for a booking
+      description: Updates booking payment method and marks as paid
+      parameters:
+        - name: bookingCode
+          in: path
+          required: true
+          schema:
+            type: string
+          example: VJP-CB13070C
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - payment_method
+              properties:
+                payment_method:
+                  type: string
+                  enum: ["0", "1", "2"]
+                  description: "0=現金払い, 1=オンラインでクレジット決済, 2=ベトナム口座振込"
+                  example: "0"
+      responses:
+        "200":
+          description: Payment recorded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+        "422":
+          description: Validation error
+  /bookings:
+    get:
+      operationId: listBookings
+      summary: List bookings with optional filters
+      description: List bookings with optional filters by arrival_airport, phone, or email
+      parameters:
+        - name: airport_code
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: ["0", "1", "2", "3"]
+        - name: phone
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: email
+          in: query
+          required: false
+          schema:
+            type: string
+            format: email
+      responses:
+        "200":
+          description: Bookings list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+    post:
+      operationId: createBooking
+      summary: Create a new booking (legacy)
+      description: Creates a new FastTrack booking with all details at once. Use /init + /updateStep for step-by-step flow.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - booking_type
+                - arrival_airport
+                - entry_fast_track_option
+                - entry_fast_track_price
+                - passengers
+                - flight_details
+              properties:
+                booking_type:
+                  type: string
+                  enum: [both, arrival, departure]
+                  example: arrival
+                use_departure_fast_track:
+                  type: boolean
+                  example: false
+                arrival_airport:
+                  type: string
+                  enum: ["0", "1", "2", "3"]
+                  description: "0=SGN, 1=DAD, 2=HAN, 3=PQC"
+                  example: "0"
+                departure_airport_code:
+                  type: string
+                  enum: ["0", "1", "2", "3"]
+                  description: "0=SGN, 1=DAD, 2=HAN, 3=PQC"
+                  example: "2"
+                entry_fast_track_option:
+                  type: string
+                  description: Entry fast track package code
+                  example: "0"
+                departure_fast_track_option:
+                  type: string
+                  description: Departure fast track package code
+                  example: "2"
+                entry_fast_track_price:
+                  type: number
+                  format: float
+                  description: Base price of the entry service package in USD
+                  example: 35
+                departure_fast_track_price:
+                  type: number
+                  format: float
+                  description: Base price of the departure service package in USD
+                  example: 65
+                payment_method:
+                  type: string
+                  enum: ["0", "1", "2"]
+                  description: "0=現金払い, 1=オンラインでクレジット決済, 2=ベトナム口座振込"
+                  example: "0"
+                user_phone_number:
+                  type: string
+                  example: "+84909123456"
+                contact_email_to:
+                  type: string
+                  format: email
+                  example: test@example.com
+                contact_email_cc:
+                  type: string
+                  format: email
+                  example: cc@example.com
+                preliminary_calculation:
+                  type: number
+                  format: float
+                coupon_discount_amount:
+                  type: number
+                  format: float
+                two_way_discount:
+                  type: number
+                  format: float
+                night_surcharge_value:
+                  type: number
+                  format: float
+                passengers:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    required:
+                      - sex
+                      - date_of_birth
+                      - last_name
+                      - first_name
+                      - nationality
+                      - passport_number
+                    properties:
+                      sex:
+                        type: string
+                        description: "Gender. DB stores: 0=男性(Nam), 1=女性(Nữ). Accepts: 0, 1, male, female, Nam, Nữ (normalized to 0 or 1)."
+                        example: male
+                      date_of_birth:
+                        type: string
+                        format: date
+                        example: "1990-05-15"
+                      user_phone_number:
+                        type: string
+                        example: "+84909123456"
+                      contact_email_to:
+                        type: string
+                        format: email
+                        example: test@example.com
+                      last_name:
+                        type: string
+                        example: Nguyen
+                      first_name:
+                        type: string
+                        example: "Van A"
+                      nationality:
+                        type: string
+                        example: JP
+                      passport_number:
+                        type: string
+                        example: B1234567
+                      passport_expiry_date:
+                        type: string
+                        format: date
+                        example: "2030-05-15"
+                      contact_email_cc:
+                        type: string
+                        format: email
+                      optional_company_name:
+                        type: string
+                      referred_by_name:
+                        type: string
+                      contact_method:
+                        type: integer
+                      survey_channel:
+                        type: integer
+                      add_ons:
+                        type: array
+                        items:
+                          type: string
+                flight_details:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    required:
+                      - flight_type
+                      - flight_number
+                      - flight_date
+                    properties:
+                      flight_type:
+                        type: string
+                        enum: [arrival, departure]
+                        example: arrival
+                      booking_code:
+                        type: string
+                        description: Flight booking code (PNR)
+                        example: ABC123
+                      flight_reservation_code:
+                        type: string
+                      flight_number:
+                        type: string
+                        example: VN349
+                      flight_date:
+                        type: string
+                        format: date
+                        example: "2026-06-15"
+                      flight_time:
+                        type: string
+                        description: Local time at airport (HH:MM)
+                        example: "14:30"
+                      class_documents:
+                        type: string
+                        enum: [economy, business]
+                        example: economy
+                      use_immigration_fast_track:
+                        type: boolean
+                      tarmac_pickup:
+                        type: boolean
+                      pickup_service:
+                        type: integer
+                      checked_baggage_availability:
+                        type: string
+                        enum: [available, not_available, undecided]
+                        example: "not_available"
+                      request:
+                        type: string
+                      pickup_time:
+                        type: string
+                      seating_preferences:
+                        type: string
+                      phone_number:
+                        type: string
+                      driver_info_confirmation:
+                        type: string
+                options:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        example: "Tarmac pickup"
+                      price:
+                        type: number
+                        format: float
+                        example: 60
+      responses:
+        "201":
+          description: Booking created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  errors:
+                    type: object
