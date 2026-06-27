@@ -619,6 +619,18 @@ paths:
                   enum: [available, not_available, undecided]
                 departure_seating_preferences:
                   type: string
+                departure_flight_reservation_code:
+                  type: string
+                  description: Flight reservation code for departure (PNR)
+                  example: "XYZ789"
+                departure_flight_number:
+                  type: string
+                  description: Departure flight number
+                  example: "VN350"
+                pickup_time:
+                  type: string
+                  description: Pickup time at departure airport (HH:MM, root-level field)
+                  example: "08:30"
                 use_immigration_fast_track:
                   type: boolean
                 tarmac_pickup:

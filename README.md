@@ -1,78 +1,58 @@
-# GPTs Chatbot
+<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
 
-Chatbot app powered by Laravel + external booking API.
+<p align="center">
+<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
+<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
+<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
+<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
+</p>
 
-## Stack
+## About Laravel
 
-- **Framework**: Laravel 11 (PHP 8.3)
-- **Database**: MySQL / PostgreSQL
-- **Cache/Queue**: Redis
-- **Runtime**: FrankenPHP (via MonkeysCloud)
+Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
 
-## Local Development
+- [Simple, fast routing engine](https://laravel.com/docs/routing).
+- [Powerful dependency injection container](https://laravel.com/docs/container).
+- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
+- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
+- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
+- [Robust background job processing](https://laravel.com/docs/queues).
+- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+
+Laravel is accessible, powerful, and provides tools required for large, robust applications.
+
+## Learning Laravel
+
+Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+
+In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+
+You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+
+## Agentic Development
+
+Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
 
 ```bash
-composer install
-cp .env.example .env
-php artisan key:generate
-php artisan migrate
-php artisan serve
+composer require laravel/boost --dev
+
+php artisan boost:install
 ```
 
-## Deployment — MonkeysCloud
+Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
 
-### 1. Chuẩn bị repo GitHub
+## Contributing
 
-Push code lên GitHub (repo phải public hoặc kết nối GitHub với MonkeysCloud).
+Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
 
-### 2. Tạo project trên MonkeysCloud
+## Code of Conduct
 
-1. Đăng ký tại [monkeys.cloud](https://monkeys.cloud) (GitHub hoặc Google — không cần thẻ)
-2. Tạo **Project** mới
-3. Thêm **Instance 1** — chọn stack **Laravel** (FrankenPHP, PHP 8.4)
-4. Thêm **Database 1** — chọn **MySQL 8.4**
-5. Thêm **Database 2** — chọn **Redis 7** (cho queue, cache, session)
-6. Kết nối repo GitHub → push → auto-deploy
+In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
 
-### 3. Cấu hình Environment Variables
+## Security Vulnerabilities
 
-Trong MonkeysCloud dashboard, thêm các biến môi trường:
+If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
 
-```
-APP_ENV=production
-APP_DEBUG=false
-APP_KEY=        # chạy php artisan key:generate để tạo
-DB_CONNECTION=mysql
-DB_HOST=<MySQL host từ MonkeysCloud>
-DB_PORT=3306
-DB_DATABASE=<tên database>
-DB_USERNAME=<username>
-DB_PASSWORD=<password>
-REDIS_HOST=<Redis host từ MonkeysCloud>
-REDIS_PORT=6379
-REDIS_PASSWORD=null
-CACHE_DRIVER=redis
-QUEUE_CONNECTION=redis
-SESSION_DRIVER=redis
-```
+## License
 
-### 4. Chạy migration
-
-Sau khi deploy thành công, chạy:
-
-```
-php artisan migrate
-```
-
-### 5. Instance 2 — Queue Worker (tùy chọn)
-
-Nếu app dùng queue jobs, thêm **Instance 2** chọn **Worker** và set:
-
-```
-COMMAND=php artisan queue:work redis --sleep=3 --tries=3
-```
-
-### Lưu ý
-
-- Free instance **ngủ sau 30 phút** không active → wake-up vài giây
-- App debug mode: **tắt** (`APP_DEBUG=false`) khi lên production
+The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).

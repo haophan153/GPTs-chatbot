@@ -105,8 +105,6 @@ class BookingExternalApiService
             'total'                                 => $data['total'],
             'payment_method'                        => $data['payment_method'],
             'user_phone_number'                     => $data['user_phone_number'],
-            'contact_email_to'                      => $data['contact_email_to'],
-            'contact_email_cc'                      => $data['contact_email_cc'],
         ];
 
         if ($passenger) {
@@ -118,6 +116,8 @@ class BookingExternalApiService
             $payload['passport_number']       = $passenger->passport_number;
             $payload['passport_expiry_date']  = optional($passenger->passport_expiry_date)->toIso8601String();
             $payload['user_phone_number']     = $passenger->user_phone_number ?? $data['user_phone_number'];
+            $payload['contact_email_to']      = $passenger->contact_email_to ?? $data['contact_email_to'];
+            $payload['contact_email_cc']       = $passenger->contact_email_cc ?? $data['contact_email_cc'];
             $payload['optional_company_name'] = $passenger->optional_company_name;
             $payload['referred_by_name']      = $passenger->referred_by_name;
             $payload['contact_method']        = $passenger->contact_method;

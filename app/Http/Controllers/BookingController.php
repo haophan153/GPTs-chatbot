@@ -219,6 +219,9 @@ class BookingController extends Controller
                 if (empty($booking->contact_email_to) && !empty($data['passengers'][0]['contact_email_to'])) {
                     $booking->contact_email_to = $data['passengers'][0]['contact_email_to'];
                 }
+                if (empty($booking->contact_email_cc) && !empty($data['passengers'][0]['contact_email_cc'])) {
+                    $booking->contact_email_cc = $data['passengers'][0]['contact_email_cc'];
+                }
                 if (empty($booking->user_phone_number) && !empty($data['passengers'][0]['user_phone_number'])) {
                     $booking->user_phone_number = $data['passengers'][0]['user_phone_number'];
                 }
@@ -395,12 +398,16 @@ class BookingController extends Controller
                       + $tarmacAddon
                       + $pickupValue;
 
-            $twoWayDiscount    = (float) ($data['two_way_discount'] ?? 0);
-            $couponDiscount    = (float) ($data['coupon_discount_amount'] ?? 0);
-            $nightSurcharge    = (float) ($data['night_surcharge_value'] ?? 0);
-            $preliminaryCalc   = $subtotal - $twoWayDiscount;
-            $tax               = round($preliminaryCalc * 0.08, 2);
-            $totalAmount       = round($preliminaryCalc + $tax + $nightSurcharge - $couponDiscount, 2);
+            $nightSurcharge = (self::isNightTimeStatic($data['arrival_time'] ?? null) || self::isNightTimeStatic($data['pickup_time'] ?? null))
+                ? 5.00 : 0.00;
+
+            $twoWayDiscount = (($data['use_departure_fast_track'] ?? false) || ($data['booking_type'] ?? null) === 'both')
+                ? 5.00 : 0.00;
+
+            $preliminaryCalc   = max(0, $subtotal + $nightSurcharge - $twoWayDiscount);
+            $tax              = round($preliminaryCalc * 0.08, 2);
+            $couponDiscount   = (float) ($data['coupon_discount_amount'] ?? 0);
+            $totalAmount      = max(0, $preliminaryCalc + $tax - $couponDiscount);
 
             $booking = Booking::create([
                 'booking_code'               => $bookingCode,
@@ -826,27 +833,39 @@ class BookingController extends Controller
                   + $tarmacAddon
                   + $pickupValue;
 
-        $twoWayDiscount    = (float) ($booking->two_way_discount ?? 0);
-        $couponDiscount    = (float) ($booking->coupon_discount_amount ?? 0);
-        $nightSurcharge    = (float) ($booking->night_surcharge_value ?? 0);
+        $nightSurcharge = ($this->isNightTime($booking->arrival_time) || $this->isNightTime($booking->pickup_time))
+            ? 5.00 : 0.00;
 
-        $preliminaryCalculation = $subtotal - $twoWayDiscount;
+        $twoWayDiscount = ($booking->use_departure_fast_track || $booking->booking_type === 'both')
+            ? 5.00 : 0.00;
+
+        $preliminaryCalculation = max(0, $subtotal + $nightSurcharge - $twoWayDiscount);
         $tax                     = round($preliminaryCalculation * 0.08, 2);
-        $total                   = round($preliminaryCalculation + $tax + $nightSurcharge - $couponDiscount, 2);
+        $couponDiscount          = (float) ($booking->coupon_discount_amount ?? 0);
+        $total                   = max(0, $preliminaryCalculation + $tax - $couponDiscount);
 
         $booking->update([
             'subtotal'                  => $subtotal,
             'preliminary_calculation'   => $preliminaryCalculation,
+            'two_way_discount'         => $twoWayDiscount,
+            'night_surcharge_value'    => $nightSurcharge,
             'tax'                       => $tax,
             'total'                     => $total,
         ]);
+    }
+
+    private function isNightTime(?string $time): bool
+    {
+        if (!$time) return false;
+        $hour = (int) substr($time, 0, 2);
+        return $hour >= 19 || $hour < 7;
     }
 
     private function getMissingFields(Booking $booking): array
     {
         $missing = [];
 
-        if (empty($booking->entry_fast_track_option)) {
+        if (is_null($booking->entry_fast_track_option)) {
             $missing[] = 'entry_fast_track_option';
         }
 
@@ -937,5 +956,12 @@ class BookingController extends Controller
         if (!in_array('passengers', $collected))               return 'passengers';
         if (!in_array('payment_method', $collected))           return 'payment_method';
         return 'confirmed';
+    }
+
+    private static function isNightTimeStatic(?string $time): bool
+    {
+        if (!$time) return false;
+        $hour = (int) substr($time, 0, 2);
+        return $hour >= 19 || $hour < 7;
     }
 }
