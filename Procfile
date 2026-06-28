@@ -1,2 +1,2 @@
-﻿release: php artisan config:clear && DB_PASSWORD=jWoGlC1ldQFGkLWcasXfpxBXqcweEas php artisan migrate:fresh --force
+﻿release: php artisan config:clear && DB_PASSWORD=jWoGlC1ldQFGkLWcasXfpxBXqcweEas php artisan migrate --force
 web: /start-container.sh

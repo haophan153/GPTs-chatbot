@@ -8,16 +8,34 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('bookings', function (Blueprint $table) {
-            $table->string('departure_flight_reservation_code', 20)->nullable()->after('departure_airport_code');
-            $table->string('departure_flight_number', 20)->nullable()->after('departure_flight_reservation_code');
-        });
+        try {
+            if (!Schema::hasColumn('bookings', 'departure_flight_reservation_code')) {
+                Schema::table('bookings', function (Blueprint $table) {
+                    $table->string('departure_flight_reservation_code')->nullable()->after('departure_airport_code');
+                });
+            }
+        } catch (\Throwable $e) {
+            // Column may already exist
+        }
+
+        try {
+            if (!Schema::hasColumn('bookings', 'departure_flight_number')) {
+                Schema::table('bookings', function (Blueprint $table) {
+                    $table->string('departure_flight_number')->nullable()->after('departure_flight_reservation_code');
+                });
+            }
+        } catch (\Throwable $e) {
+            // Column may already exist
+        }
     }
 
     public function down(): void
     {
-        Schema::table('bookings', function (Blueprint $table) {
-            $table->dropColumn(['departure_flight_reservation_code', 'departure_flight_number']);
-        });
+        try {
+            Schema::table('bookings', function (Blueprint $table) {
+                $table->dropColumn(['departure_flight_reservation_code', 'departure_flight_number']);
+            });
+        } catch (\Exception $e) {
+        }
     }
 };
