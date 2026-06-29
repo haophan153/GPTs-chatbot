@@ -12,6 +12,11 @@ class TestExternalApiSeeder extends Seeder
 {
     public function run(): void
     {
+        if (Booking::count() > 0) {
+            $this->command->info('Bookings already exist, skipping test data.');
+            return;
+        }
+
         // Tạo booking giống hệt mẫu JSON bạn gửi
         $booking = Booking::create([
             'booking_code'                          => Booking::generateBookingCode(),

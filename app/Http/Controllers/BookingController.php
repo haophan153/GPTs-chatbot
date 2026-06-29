@@ -626,7 +626,7 @@ class BookingController extends Controller
         }
 
         $otp = BookingOtp::generate($booking->booking_code);
-        Mail::to($booking->contact_email_to)->queue(new BookingCancellationOtp($booking, $otp));
+        Mail::to($booking->contact_email_to)->send(new BookingCancellationOtp($booking, $otp));
 
         return response()->json([
             'success' => true,
