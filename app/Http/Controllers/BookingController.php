@@ -198,14 +198,14 @@ class BookingController extends Controller
                     Passenger::create([
                         'booking_id'           => $booking->id,
                         'sex'                  => $sexValue,
-                        'date_of_birth'        => $pax['date_of_birth']  ?? null,
+                        'date_of_birth'        => $this->normalizeDate($pax['date_of_birth'] ?? null),
                         'user_phone_number'    => $pax['user_phone_number'] ?? $pax['phone'] ?? null,
                         'contact_email_to'     => $pax['contact_email_to'] ?? $pax['email'] ?? null,
                         'last_name'           => $pax['last_name']  ?? null,
                         'first_name'          => $pax['first_name'] ?? null,
                         'nationality'         => $pax['nationality'] ?? null,
                         'passport_number'     => $pax['passport_number'] ?? null,
-                        'passport_expiry_date' => $pax['passport_expiry_date'] ?? $pax['passport_expiry'] ?? null,
+                        'passport_expiry_date' => $this->normalizeDate($pax['passport_expiry_date'] ?? $pax['passport_expiry'] ?? null),
                         'contact_email_cc'    => $pax['contact_email_cc'] ?? null,
                         'optional_company_name' => $pax['optional_company_name'] ?? null,
                         'referred_by_name'    => $pax['referred_by_name'] ?? null,
@@ -461,14 +461,14 @@ class BookingController extends Controller
                 Passenger::create([
                     'booking_id'           => $booking->id,
                     'sex'                  => $pax['sex'],
-                    'date_of_birth'        => $pax['date_of_birth'],
+                    'date_of_birth'        => $this->normalizeDate($pax['date_of_birth'] ?? null),
                     'user_phone_number'    => $pax['user_phone_number'] ?? $pax['phone'] ?? null,
                     'contact_email_to'     => $pax['contact_email_to'] ?? $pax['email'] ?? null,
                     'last_name'           => $pax['last_name'],
                     'first_name'          => $pax['first_name'],
                     'nationality'         => $pax['nationality'],
                     'passport_number'     => $pax['passport_number'],
-                    'passport_expiry_date' => $pax['passport_expiry_date'] ?? $pax['passport_expiry'] ?? null,
+                    'passport_expiry_date' => $this->normalizeDate($pax['passport_expiry_date'] ?? $pax['passport_expiry'] ?? null),
                     'contact_email_cc'    => $pax['contact_email_cc'] ?? null,
                     'optional_company_name' => $pax['optional_company_name'] ?? null,
                     'referred_by_name'    => $pax['referred_by_name'] ?? null,
@@ -792,6 +792,27 @@ class BookingController extends Controller
     }
 
     // ─── Private helpers ───────────────────────────────────────────────────────
+
+    private function normalizeDate(?string $value): ?string
+    {
+        if (empty($value)) return null;
+
+        $value = trim($value);
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+            return $value;
+        }
+
+        if (preg_match('/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/', $value, $m)) {
+            return sprintf('%04d-%02d-%02d', $m[3], $m[2], $m[1]);
+        }
+
+        try {
+            return \Carbon\Carbon::parse($value)->format('Y-m-d');
+        } catch (\Throwable) {
+            return $value;
+        }
+    }
 
     private function normalizeSex(string|int $value): int
     {
