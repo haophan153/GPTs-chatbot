@@ -4,8 +4,8 @@ info:
   description: API for creating and managing FastTrack airport service bookings
   version: 2.0.0
 servers:
-  - url: https://mandatory-papaya-sanded.ngrok-free.dev/api
-    description: Production server (ngrok tunnel)
+  - url: https://gpts-chatbot-production.up.railway.app/api
+    description: Production server (Railway)
 security:
   - ApiKeyAuth: []
 components:
